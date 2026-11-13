@@ -76,3 +76,6 @@ Destroyed or missing tanks are automatically removed from the current selection 
 - Destroyed tanks are filtered out before commands and removed from selection automatically.
 
 Group movement uses the existing `TankMovement.SetDestination` API. This is a simple destination formation, not collision avoidance or pathfinding; tanks may still bunch up around obstacles.
+### Input picking note
+
+Mouse clicks on tanks use `Physics2D.OverlapPoint` to test the world-space pointer position. Do not use a zero-direction `Physics2D.Raycast` for point picking. Shift-click and Shift-drag both accept either Shift key.
