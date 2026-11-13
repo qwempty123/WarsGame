@@ -5,6 +5,7 @@ public class UnitSelection : MonoBehaviour
 {
     [Header("Настройки выделения")]
     [SerializeField] private float dragThreshold = 5f;
+    [SerializeField, Min(1.5f)] private float formationSpacing = 2f;
 
     private List<Tank_T90> selectedTanks = new List<Tank_T90>();
 
@@ -114,7 +115,7 @@ public class UnitSelection : MonoBehaviour
             if (tank == null) tank = hit.collider.GetComponentInParent<Tank_T90>();
 
             // Если навели на врага (ID не равен 0)
-            if (tank != null && tank.teamId != 0)
+            if (tank != null && tank.teamId != 0 && !tank.IsDead)
             {
                 hoveredEnemy = tank;
             }
@@ -133,30 +134,37 @@ public class UnitSelection : MonoBehaviour
     {
         Vector3 mouseWorld = GetMouseWorldPos();
         RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
-        bool clickedOurTank = false;
+        Tank_T90 clickedTank = null;
 
         if (hit.collider != null)
         {
-            Tank_T90 tank = hit.collider.GetComponent<Tank_T90>();
-            if (tank == null) tank = hit.collider.GetComponentInParent<Tank_T90>();
-
-            if (tank != null && tank.teamId == 0)
-            {
-                if (!Input.GetKey(KeyCode.LeftShift)) ClearSelection();
-
-                if (!selectedTanks.Contains(tank))
-                {
-                    selectedTanks.Add(tank);
-                    tank.SetSelected(true);
-                }
-                clickedOurTank = true;
-            }
+            clickedTank = hit.collider.GetComponent<Tank_T90>();
+            if (clickedTank == null) clickedTank = hit.collider.GetComponentInParent<Tank_T90>();
         }
 
-        if (!clickedOurTank && !Input.GetKey(KeyCode.LeftShift))
+        if (clickedTank != null && clickedTank.teamId == 0 && !clickedTank.IsDead)
         {
-            ClearSelection();
+            bool additive = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
+            if (additive && selectedTanks.Contains(clickedTank))
+            {
+                selectedTanks.Remove(clickedTank);
+                clickedTank.SetSelected(false);
+                return;
+            }
+
+            if (!additive) ClearSelection();
+
+            if (!selectedTanks.Contains(clickedTank))
+            {
+                selectedTanks.Add(clickedTank);
+                clickedTank.SetSelected(true);
+            }
+            return;
         }
+
+        bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        if (!shiftHeld) ClearSelection();
     }
 
     // Выделение рамкой
@@ -171,7 +179,7 @@ public class UnitSelection : MonoBehaviour
             Tank_T90 tank = col.GetComponent<Tank_T90>();
             if (tank == null) tank = col.GetComponentInParent<Tank_T90>();
 
-            if (tank != null && tank.teamId == 0)
+            if (tank != null && tank.teamId == 0 && !tank.IsDead)
             {
                 if (!selectedTanks.Contains(tank))
                 {
@@ -194,6 +202,7 @@ public class UnitSelection : MonoBehaviour
     // Приказы правой кнопкой мыши
     private void IssueCommand(Vector3 mouseWorld)
     {
+        RemoveUnavailableUnitsFromSelection();
         if (selectedTanks.Count == 0) return;
 
         RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
@@ -205,30 +214,42 @@ public class UnitSelection : MonoBehaviour
             if (clickedTank == null) clickedTank = hit.collider.GetComponentInParent<Tank_T90>();
         }
 
-        // АТАКА
-        if (clickedTank != null && clickedTank.teamId != 0)
+        // Правый клик по живому противнику — приказ атаки.
+        if (clickedTank != null && clickedTank.teamId != 0 && !clickedTank.IsDead)
         {
-            foreach (var tank in selectedTanks)
+            foreach (Tank_T90 tank in selectedTanks)
             {
+                if (tank == null || tank.IsDead) continue;
+
                 TankCombat combat = tank.GetComponent<TankCombat>();
                 if (combat != null) combat.SetTarget(clickedTank);
             }
+            return;
         }
-        // ДВИЖЕНИЕ
-        else
-        {
-            foreach (var tank in selectedTanks)
-            {
-                TankCombat combat = tank.GetComponent<TankCombat>();
-                if (combat != null) combat.ClearTarget();
 
-                TankMovement move = tank.GetComponent<TankMovement>();
-                if (move != null)
-                {
-                    Vector2 offset = Random.insideUnitCircle * 1.5f;
-                    move.SetDestination(mouseWorld + (Vector3)offset);
-                }
-            }
+        // Правый клик по земле — движение строем.
+        int unitCount = selectedTanks.Count;
+        int columns = Mathf.CeilToInt(Mathf.Sqrt(unitCount));
+        int rows = Mathf.CeilToInt(unitCount / (float)columns);
+
+        for (int i = 0; i < unitCount; i++)
+        {
+            Tank_T90 tank = selectedTanks[i];
+            if (tank == null || tank.IsDead) continue;
+
+            TankCombat combat = tank.GetComponent<TankCombat>();
+            if (combat != null) combat.ClearTarget();
+
+            TankMovement movement = tank.GetComponent<TankMovement>();
+            if (movement == null) continue;
+
+            int column = i % columns;
+            int row = i / columns;
+            float offsetX = (column - (columns - 1) * 0.5f) * formationSpacing;
+            float offsetY = ((rows - 1) * 0.5f - row) * formationSpacing;
+            Vector3 formationOffset = new Vector3(offsetX, offsetY, 0f);
+
+            movement.SetDestination(mouseWorld + formationOffset);
         }
     }
 
