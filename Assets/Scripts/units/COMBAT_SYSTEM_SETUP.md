@@ -63,3 +63,6 @@ selection manager has this component enabled.
 | HE | 15 | 20 | 3 s | 8 |
 
 HE example: splash radius 1.5 world units, splash damage 25. These are gameplay values; adjust them to your sprite scale and desired time-to-kill.
+## Selection cleanup
+
+Destroyed or missing tanks are automatically removed from the current selection during `UnitSelection.Update`. They no longer receive group commands or ammo hotkeys, and the ammo HUD stops using them.
