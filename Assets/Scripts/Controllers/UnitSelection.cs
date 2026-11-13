@@ -45,7 +45,8 @@ public class UnitSelection : MonoBehaviour
 
             if (isBoxSelecting)
             {
-                SelectUnitsInBox(dragStartWorld, GetMouseWorldPos(), Input.GetKey(KeyCode.LeftShift));
+                SelectUnitsInBox(dragStartWorld, GetMouseWorldPos(),
+                    Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
             }
             else
             {
@@ -107,12 +108,12 @@ public class UnitSelection : MonoBehaviour
         if (selectedTanks.Count == 0) return;
 
         Vector3 mouseWorld = GetMouseWorldPos();
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hitCollider = Physics2D.OverlapPoint(mouseWorld);
 
-        if (hit.collider != null)
+        if (hitCollider != null)
         {
-            Tank_T90 tank = hit.collider.GetComponent<Tank_T90>();
-            if (tank == null) tank = hit.collider.GetComponentInParent<Tank_T90>();
+            Tank_T90 tank = hitCollider.GetComponent<Tank_T90>();
+            if (tank == null) tank = hitCollider.GetComponentInParent<Tank_T90>();
 
             // Если навели на врага (ID не равен 0)
             if (tank != null && tank.teamId != 0 && !tank.IsDead)
@@ -133,13 +134,13 @@ public class UnitSelection : MonoBehaviour
     private void HandleSingleClick()
     {
         Vector3 mouseWorld = GetMouseWorldPos();
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hitCollider = Physics2D.OverlapPoint(mouseWorld);
         Tank_T90 clickedTank = null;
 
-        if (hit.collider != null)
+        if (hitCollider != null)
         {
-            clickedTank = hit.collider.GetComponent<Tank_T90>();
-            if (clickedTank == null) clickedTank = hit.collider.GetComponentInParent<Tank_T90>();
+            clickedTank = hitCollider.GetComponent<Tank_T90>();
+            if (clickedTank == null) clickedTank = hitCollider.GetComponentInParent<Tank_T90>();
         }
 
         if (clickedTank != null && clickedTank.teamId == 0 && !clickedTank.IsDead)
@@ -205,13 +206,13 @@ public class UnitSelection : MonoBehaviour
         RemoveUnavailableUnitsFromSelection();
         if (selectedTanks.Count == 0) return;
 
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hitCollider = Physics2D.OverlapPoint(mouseWorld);
         Tank_T90 clickedTank = null;
 
-        if (hit.collider != null)
+        if (hitCollider != null)
         {
-            clickedTank = hit.collider.GetComponent<Tank_T90>();
-            if (clickedTank == null) clickedTank = hit.collider.GetComponentInParent<Tank_T90>();
+            clickedTank = hitCollider.GetComponent<Tank_T90>();
+            if (clickedTank == null) clickedTank = hitCollider.GetComponentInParent<Tank_T90>();
         }
 
         // Правый клик по живому противнику — приказ атаки.
