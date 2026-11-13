@@ -27,7 +27,6 @@ public class TankCombat : MonoBehaviour
     [Header("Ammunition")]
     [SerializeField] private List<ShellAmmoSlot> ammunition = new List<ShellAmmoSlot>();
     [SerializeField] private int selectedAmmoIndex;
-    [SerializeField] private bool refillOnStart = true;
 
     private float nextFireTime;
     private Tank_T90 myTank;
@@ -53,9 +52,7 @@ public class TankCombat : MonoBehaviour
         foreach (ShellAmmoSlot slot in ammunition)
         {
             if (slot == null) continue;
-            slot.remaining = refillOnStart
-                ? Mathf.Clamp(slot.startingAmount, 0, slot.capacity)
-                : Mathf.Clamp(slot.remaining, 0, slot.capacity);
+            slot.Initialize();
         }
         selectedAmmoIndex = FindLoadedSlot(selectedAmmoIndex);
         initialized = true;
