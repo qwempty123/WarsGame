@@ -2,38 +2,32 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    [SerializeField] private float defaultSpeed = 10f;
     private Transform target;
-    private ShellData shell;
-    private int shooterTeamId = -1;
-    private float remainingLifetime = 5f;
-    private bool hasImpacted;
+    private ShellType shellType;
+    private int shooterTeamId;
+    private float damage;
+    private float penetration;
+    private float speed;
+    private float splashRadius;
+    private float splashDamage;
+    private float lifeTime = 5f;
 
-    public void Setup(Transform targetTransform, ShellData shellData, int teamId)
-    {
-        target = targetTransform;
-        shell = shellData;
-        shooterTeamId = teamId;
-        if (shell != null)
-        {
-            remainingLifetime = shell.lifetime;
-            defaultSpeed = shell.projectileSpeed;
-        }
-    }
-
-    // Compatibility overload for older callers. New combat code should pass ShellData.
-    public void Setup(Transform targetTransform, float legacyDamage, int teamId)
+    public void Setup(Transform targetTransform, AmmoSettings ammo, int teamId)
     {
         target = targetTransform;
         shooterTeamId = teamId;
-        remainingLifetime = 3f;
+        shellType = ammo.type;
+        damage = ammo.damage;
+        penetration = ammo.penetration;
+        speed = ammo.projectileSpeed;
+        splashRadius = ammo.splashRadius;
+        splashDamage = ammo.splashDamage;
     }
 
     private void Update()
     {
-        if (hasImpacted) return;
-        remainingLifetime -= Time.deltaTime;
-        if (remainingLifetime <= 0f || target == null)
+        lifeTime -= Time.deltaTime;
+        if (lifeTime <= 0f || target == null)
         {
             Destroy(gameObject);
             return;
@@ -41,14 +35,11 @@ public class Projectile : MonoBehaviour
 
         Vector3 previousPosition = transform.position;
         Vector2 direction = ((Vector2)(target.position - transform.position)).normalized;
-        float stepDistance = defaultSpeed * Time.deltaTime;
-        Vector3 movement = (Vector3)(direction * stepDistance);
-        transform.position += movement;
+        float distance = speed * Time.deltaTime;
+        transform.position += (Vector3)(direction * distance);
+        transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
 
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle);
-
-        RaycastHit2D[] hits = Physics2D.RaycastAll(previousPosition, direction, movement.magnitude);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(previousPosition, direction, distance);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (RaycastHit2D hit in hits)
@@ -57,43 +48,34 @@ public class Projectile : MonoBehaviour
             if (tank != null)
             {
                 if (tank.teamId == shooterTeamId || tank.IsDead) continue;
-                ResolveTankImpact(tank, hit.point, direction);
+                HitTank(tank, hit.point);
                 return;
             }
 
-            hasImpacted = true;
             Destroy(gameObject);
             return;
         }
     }
 
-    private void ResolveTankImpact(Tank_T90 targetTank, Vector3 hitPoint, Vector2 direction)
+    private void HitTank(Tank_T90 tank, Vector3 hitPoint)
     {
-        hasImpacted = true;
-        if (shell == null)
-        {
-            targetTank.TakeDamage(10f, hitPoint);
-            Destroy(gameObject);
-            return;
-        }
+        // Armor is a single simple value: a shell penetrates when penetration >= armor.
+        tank.TakeShellDamage(penetration, damage, shellType == ShellType.HE, hitPoint);
 
-        ShellImpactResult result = DamageCalculator.Calculate(shell, targetTank, direction, hitPoint);
-        targetTank.ApplyShellImpact(result, hitPoint, shell.shellType);
-
-        if (shell.splashRadius > 0f && shell.splashDamage > 0f)
+        if (shellType == ShellType.HE && splashRadius > 0f && splashDamage > 0f)
         {
-            Collider2D[] nearby = Physics2D.OverlapCircleAll(hitPoint, shell.splashRadius);
-            foreach (Collider2D collider in nearby)
+            Collider2D[] nearby = Physics2D.OverlapCircleAll(hitPoint, splashRadius);
+            foreach (Collider2D col in nearby)
             {
-                Tank_T90 nearbyTank = collider.GetComponentInParent<Tank_T90>();
-                if (nearbyTank == null || nearbyTank == targetTank || nearbyTank.IsDead || nearbyTank.teamId == shooterTeamId) continue;
-                float distance = Vector2.Distance(hitPoint, nearbyTank.transform.position);
-                float falloff = 1f - Mathf.Clamp01(distance / shell.splashRadius);
-                nearbyTank.TakeDamage(shell.splashDamage * falloff, collider.ClosestPoint(hitPoint));
+                Tank_T90 other = col.GetComponentInParent<Tank_T90>();
+                if (other == null || other == tank || other.IsDead || other.teamId == shooterTeamId) continue;
+
+                float distance = Vector2.Distance(hitPoint, other.transform.position);
+                float falloff = 1f - Mathf.Clamp01(distance / splashRadius);
+                other.TakeDamage(splashDamage * falloff, hitPoint);
             }
         }
 
-        Debug.Log($"[{shell.displayName}] {(result.ricocheted ? "РИКОШЕТ" : result.penetrated ? "ПРОБИТИЕ" : "НЕПРОБИТИЕ")} | броня {result.effectiveArmorMM:F0} мм | пробитие {result.penetrationMM:F0} мм | урон {result.damage:F1}");
         Destroy(gameObject);
     }
 }
