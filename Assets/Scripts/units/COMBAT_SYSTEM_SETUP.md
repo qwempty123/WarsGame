@@ -31,6 +31,29 @@ Call these methods on `TankCombat`:
 
 The selected type and count are available as `SelectedShell` and `SelectedAmmoCount`.
 
+## Ammo HUD and hotkeys
+
+The current SampleScene already has a SelectionManager object with the
+UnitSelection component. The HUD is drawn by that existing component using
+Unity's built-in IMGUI, so no Canvas, EventSystem, extra prefab, or Inspector
+references are required.
+
+- Select one or more friendly tanks as usual.
+- Press **1** to select AP, **2** to select HEAT, or **3** to select HE.
+- The key press is sent through `TankCombat.SelectShell`; tanks without that
+  shell loaded keep their current selection.
+- With multiple tanks selected, the hotkey is applied to every selected tank
+  that has `TankCombat`.
+- The compact HUD appears in the lower-left corner while at least one selected
+  tank has `TankCombat`. It displays AP, HEAT, and HE counts for the first
+  selected combat tank, with the active shell highlighted.
+- Ammo counts are read from `TankCombat.GetAmmo` and refresh automatically
+  after firing, automatic ammo switching, or manual selection. The HUD does not
+  maintain a separate ammo state.
+
+The HUD is part of `UnitSelection`; if you use a different scene, make sure its
+selection manager has this component enabled.
+
 ## Balance examples
 
 | Shell | Damage | Penetration | Reload | Starting amount |
