@@ -66,3 +66,13 @@ HE example: splash radius 1.5 world units, splash damage 25. These are gameplay 
 ## Selection cleanup
 
 Destroyed or missing tanks are automatically removed from the current selection during `UnitSelection.Update`. They no longer receive group commands or ammo hotkeys, and the ammo HUD stops using them.
+## Tank selection and group movement
+
+- Left-click a friendly living tank to select it; clicking empty ground clears the selection.
+- Hold **Shift** (left or right) and click a selected friendly tank to remove only that tank from the group. Shift-click an unselected friendly tank to add it.
+- Drag a selection rectangle to select multiple friendly living tanks. Shift-drag adds to the current group.
+- Right-click a living enemy to issue an attack order to selected tanks with `TankCombat`.
+- Right-click the ground to cancel their current attack targets and assign evenly spaced grid destinations. Adjust `Formation Spacing` on `UnitSelection` to change the distance between destinations.
+- Destroyed tanks are filtered out before commands and removed from selection automatically.
+
+Group movement uses the existing `TankMovement.SetDestination` API. This is a simple destination formation, not collision avoidance or pathfinding; tanks may still bunch up around obstacles.
