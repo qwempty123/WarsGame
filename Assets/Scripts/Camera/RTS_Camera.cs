@@ -41,11 +41,37 @@ public class RTS_Camera : MonoBehaviour
     void HandleZoom()
     {
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (Mathf.Abs(scroll) > 0.001f)
+        if (Mathf.Abs(scroll) <= 0.001f) return;
+
+        bool hasAnchor = TryGetMouseWorldPosition(out Vector3 worldBeforeZoom);
+
+        float newSize = Mathf.Clamp(
+            cam.orthographicSize - scroll * zoomSpeed,
+            minOrthoSize,
+            maxOrthoSize);
+
+        if (Mathf.Approximately(newSize, cam.orthographicSize)) return;
+
+        cam.orthographicSize = newSize;
+
+        // Сохраняем точку карты под курсором на том же месте экрана.
+        if (hasAnchor && TryGetMouseWorldPosition(out Vector3 worldAfterZoom))
+            transform.position += worldBeforeZoom - worldAfterZoom;
+    }
+
+    private bool TryGetMouseWorldPosition(out Vector3 worldPosition)
+    {
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        Plane groundPlane = new Plane(Vector3.forward, Vector3.zero);
+
+        if (groundPlane.Raycast(ray, out float distance))
         {
-            cam.orthographicSize -= scroll * zoomSpeed;
-            cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, minOrthoSize, maxOrthoSize);
+            worldPosition = ray.GetPoint(distance);
+            return true;
         }
+
+        worldPosition = Vector3.zero;
+        return false;
     }
 
     void HandlePan()
