@@ -17,6 +17,8 @@ public class UnitSelection : MonoBehaviour
 
     void Update()
     {
+        RemoveUnavailableUnitsFromSelection();
+
         // --- ЛЕВАЯ КНОПКА МЫШИ (ВЫДЕЛЕНИЕ) ---
         if (Input.GetMouseButtonDown(0))
         {
@@ -62,6 +64,18 @@ public class UnitSelection : MonoBehaviour
 
         // Переключение боеприпасов для всех выбранных танков.
         HandleAmmoHotkeys();
+    }
+
+    private void RemoveUnavailableUnitsFromSelection()
+    {
+        for (int i = selectedTanks.Count - 1; i >= 0; i--)
+        {
+            Tank_T90 tank = selectedTanks[i];
+            if (tank != null && !tank.IsDead) continue;
+
+            if (tank != null) tank.SetSelected(false);
+            selectedTanks.RemoveAt(i);
+        }
     }
 
     private void HandleAmmoHotkeys()
