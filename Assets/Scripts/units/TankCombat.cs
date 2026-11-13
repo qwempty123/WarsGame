@@ -2,60 +2,52 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[Serializable]
-public class ShellAmmoSlot
-{
-    public ShellData shell;
-    [Min(0)] public int capacity = 20;
-    [Min(0)] public int startingAmount = 20;
-    [HideInInspector] public int remaining;
+public enum ShellType { AP, HEAT, HE }
 
-    public void Initialize()
-    {
-        remaining = Mathf.Clamp(startingAmount, 0, capacity);
-    }
+[Serializable]
+public class AmmoSettings
+{
+    public ShellType type;
+    [Min(0)] public int amount = 20;
+    [Min(0f)] public float damage = 30f;
+    [Min(0f)] public float penetration = 100f;
+    [Min(0.1f)] public float reloadTime = 2f;
+    [Min(0.1f)] public float projectileSpeed = 12f;
+    [Min(0f)] public float splashRadius = 0f;
+    [Min(0f)] public float splashDamage = 0f;
 }
 
 public class TankCombat : MonoBehaviour
 {
-    [Header("Targeting")]
+    [Header("Combat")]
     [Min(0.1f)] public float attackRange = 5f;
     [Range(0f, 45f)] public float aimTolerance = 5f;
     public GameObject projectilePrefab;
     public Transform firePoint;
 
-    [Header("Ammunition")]
-    [SerializeField] private List<ShellAmmoSlot> ammunition = new List<ShellAmmoSlot>();
+    [Header("Ammo")]
+    public List<AmmoSettings> ammo = new List<AmmoSettings>
+    {
+        new AmmoSettings { type = ShellType.AP, amount = 20, damage = 35f, penetration = 150f, reloadTime = 2.5f, projectileSpeed = 14f },
+        new AmmoSettings { type = ShellType.HEAT, amount = 10, damage = 50f, penetration = 220f, reloadTime = 3.5f, projectileSpeed = 11f },
+        new AmmoSettings { type = ShellType.HE, amount = 8, damage = 15f, penetration = 20f, reloadTime = 3f, projectileSpeed = 10f, splashRadius = 1.5f, splashDamage = 25f }
+    };
+
     [SerializeField] private int selectedAmmoIndex;
 
     private float nextFireTime;
     private Tank_T90 myTank;
     private TankMovement movement;
     private Tank_T90 currentTarget;
-    private bool initialized;
 
-    public ShellData SelectedShell => GetSelectedSlot()?.shell;
-    public int SelectedAmmo => GetSelectedSlot()?.remaining ?? 0;
-    public int SelectedAmmoCapacity => GetSelectedSlot()?.capacity ?? 0;
-    public IReadOnlyList<ShellAmmoSlot> Ammunition => ammunition;
+    public ShellType SelectedShell => GetSelectedAmmo()?.type ?? ShellType.AP;
+    public int SelectedAmmoCount => GetSelectedAmmo()?.amount ?? 0;
 
     private void Awake()
     {
         myTank = GetComponent<Tank_T90>();
         movement = GetComponent<TankMovement>();
-        InitializeAmmo();
-    }
-
-    private void InitializeAmmo()
-    {
-        if (initialized) return;
-        foreach (ShellAmmoSlot slot in ammunition)
-        {
-            if (slot == null) continue;
-            slot.Initialize();
-        }
-        selectedAmmoIndex = FindLoadedSlot(selectedAmmoIndex);
-        initialized = true;
+        selectedAmmoIndex = FindLoadedAmmo(selectedAmmoIndex);
     }
 
     public void SetTarget(Tank_T90 enemy)
@@ -68,10 +60,9 @@ public class TankCombat : MonoBehaviour
 
     public bool SelectShell(ShellType type)
     {
-        for (int i = 0; i < ammunition.Count; i++)
+        for (int i = 0; i < ammo.Count; i++)
         {
-            ShellAmmoSlot slot = ammunition[i];
-            if (slot != null && slot.shell != null && slot.shell.shellType == type && slot.remaining > 0)
+            if (ammo[i] != null && ammo[i].type == type && ammo[i].amount > 0)
             {
                 selectedAmmoIndex = i;
                 return true;
@@ -82,12 +73,11 @@ public class TankCombat : MonoBehaviour
 
     public bool SelectNextShell()
     {
-        if (ammunition.Count == 0) return false;
-        for (int offset = 1; offset <= ammunition.Count; offset++)
+        if (ammo.Count == 0) return false;
+        for (int i = 1; i <= ammo.Count; i++)
         {
-            int index = (selectedAmmoIndex + offset) % ammunition.Count;
-            ShellAmmoSlot slot = ammunition[index];
-            if (slot != null && slot.shell != null && slot.remaining > 0)
+            int index = (selectedAmmoIndex + i) % ammo.Count;
+            if (ammo[index] != null && ammo[index].amount > 0)
             {
                 selectedAmmoIndex = index;
                 return true;
@@ -99,29 +89,26 @@ public class TankCombat : MonoBehaviour
     public int GetAmmo(ShellType type)
     {
         int total = 0;
-        foreach (ShellAmmoSlot slot in ammunition)
-            if (slot != null && slot.shell != null && slot.shell.shellType == type)
-                total += slot.remaining;
+        foreach (AmmoSettings item in ammo)
+            if (item != null && item.type == type) total += item.amount;
         return total;
     }
 
-    private ShellAmmoSlot GetSelectedSlot()
+    private AmmoSettings GetSelectedAmmo()
     {
-        if (ammunition == null || selectedAmmoIndex < 0 || selectedAmmoIndex >= ammunition.Count) return null;
-        return ammunition[selectedAmmoIndex];
+        if (selectedAmmoIndex < 0 || selectedAmmoIndex >= ammo.Count) return null;
+        return ammo[selectedAmmoIndex];
     }
 
-    private int FindLoadedSlot(int preferred)
+    private int FindLoadedAmmo(int start)
     {
-        if (ammunition.Count == 0) return 0;
-        preferred = Mathf.Clamp(preferred, 0, ammunition.Count - 1);
-        for (int offset = 0; offset < ammunition.Count; offset++)
+        if (ammo.Count == 0) return 0;
+        for (int i = 0; i < ammo.Count; i++)
         {
-            int index = (preferred + offset) % ammunition.Count;
-            ShellAmmoSlot slot = ammunition[index];
-            if (slot != null && slot.shell != null && slot.remaining > 0) return index;
+            int index = (start + i) % ammo.Count;
+            if (ammo[index] != null && ammo[index].amount > 0) return index;
         }
-        return preferred;
+        return 0;
     }
 
     private void Update()
@@ -134,8 +121,7 @@ public class TankCombat : MonoBehaviour
             return;
         }
 
-        float distance = Vector2.Distance(transform.position, currentTarget.transform.position);
-        if (distance > attackRange)
+        if (Vector2.Distance(transform.position, currentTarget.transform.position) > attackRange)
         {
             movement?.SetDestination(currentTarget.transform.position);
             return;
@@ -144,37 +130,37 @@ public class TankCombat : MonoBehaviour
         movement?.Stop();
         movement?.RotateTowards(currentTarget.transform.position);
 
-        ShellAmmoSlot slot = GetSelectedSlot();
-        if (slot == null || slot.shell == null || slot.remaining <= 0)
+        AmmoSettings selected = GetSelectedAmmo();
+        if (selected == null || selected.amount <= 0)
         {
-            if (SelectNextShell()) slot = GetSelectedSlot();
-            else return;
+            if (!SelectNextShell()) return;
+            selected = GetSelectedAmmo();
         }
 
         if (movement != null && movement.IsFacing(currentTarget.transform.position, aimTolerance) && Time.time >= nextFireTime)
-            Shoot(slot, currentTarget);
+            Shoot(selected, currentTarget);
     }
 
-    private void Shoot(ShellAmmoSlot slot, Tank_T90 target)
+    private void Shoot(AmmoSettings selected, Tank_T90 target)
     {
         if (projectilePrefab == null || firePoint == null)
         {
-            Debug.LogError($"[{name}] Не назначены Projectile Prefab или FirePoint.", this);
+            Debug.LogError($"[{name}] Assign Projectile Prefab and Fire Point.", this);
             return;
         }
 
-        GameObject projectileObject = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
-        Projectile projectile = projectileObject.GetComponent<Projectile>();
+        GameObject obj = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+        Projectile projectile = obj.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError($"[{name}] На Projectile Prefab отсутствует компонент Projectile.", projectileObject);
-            Destroy(projectileObject);
+            Debug.LogError("Projectile Prefab has no Projectile component.", obj);
+            Destroy(obj);
             return;
         }
 
-        projectile.Setup(target.transform, slot.shell, myTank.teamId);
-        slot.remaining--;
-        nextFireTime = Time.time + Mathf.Max(0.1f, slot.shell.reloadSeconds);
+        projectile.Setup(target.transform, selected, myTank.teamId);
+        selected.amount--;
+        nextFireTime = Time.time + Mathf.Max(0.1f, selected.reloadTime);
     }
 
     private void OnDrawGizmosSelected()
