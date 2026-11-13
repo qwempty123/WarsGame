@@ -4,37 +4,34 @@ public enum HitSide { Front, Side, Rear }
 
 public class Tank_T90 : MonoBehaviour
 {
-    [Header("Выделение")]
+    [Header("Selection")]
     public GameObject selectionArrow;
 
-    [Header("Команда")]
+    [Header("Team")]
     public int teamId = 0;
 
-    [Header("Здоровье")]
-    public float maxHealth = 100f;
+    [Header("Health")]
+    [Min(1f)] public float maxHealth = 100f;
     public float CurrentHealth { get; private set; }
 
-    [Header("Бронирование (мм)")]
-    [Tooltip("Лоб. Чем толще — тем меньше урона спереди")]
-    public float frontArmorMM = 200f;
-    [Tooltip("Борт")]
-    public float sideArmorMM = 80f;
-    [Tooltip("Корма. Мало = много урона сзади")]
-    public float rearArmorMM = 40f;
+    [Header("Armor (mm)")]
+    [Min(1f)] public float frontArmorMM = 200f;
+    [Min(1f)] public float sideArmorMM = 80f;
+    [Min(1f)] public float rearArmorMM = 40f;
 
-    [Header("Настройка баланса")]
-    [Tooltip("Эталонная толщина брони (при такой урон идёт 1x). По умолчанию 100мм")]
+    [Header("Legacy compatibility")]
+    [Tooltip("Retained for compatibility with old prefabs/scripts. Shell penetration now determines armor defeat.")]
     public float referenceArmorMM = 100f;
 
-    [Header("Эффекты")]
+    [Header("Effects")]
     public GameObject hitEffectPrefab;
     public GameObject explosionPrefab;
 
     private Animator animator;
     private TankMovement movement;
-    private bool isDead = false;
+    private bool isDead;
 
-    void Start()
+    private void Awake()
     {
         CurrentHealth = maxHealth;
         animator = GetComponent<Animator>();
@@ -44,59 +41,21 @@ public class Tank_T90 : MonoBehaviour
 
     public void SetSelected(bool selected)
     {
-        if (isDead) return;
-        if (selectionArrow != null) selectionArrow.SetActive(selected);
+        if (!isDead && selectionArrow != null) selectionArrow.SetActive(selected);
     }
 
-    public void TakeDamage(float rawDamage, Vector3 hitPoint)
-    {
-        if (isDead) return;
-
-        HitSide side = GetHitSide(hitPoint);
-        float armorMM = GetArmorMM(side);
-
-        // Коэффициент урона: эталон / реальная броня
-        // 100мм = 1x, 200мм = 0.5x, 50мм = 2x
-        float multiplier = Mathf.Clamp(referenceArmorMM / Mathf.Max(1f, armorMM), 0.1f, 3f);
-        float effectiveDamage = rawDamage * multiplier;
-
-        CurrentHealth -= effectiveDamage;
-
-        // Лог с цветом — для удобства баланса
-        string sideName = side == HitSide.Front ? "<color=#66ff66>ЛОБ</color>"
-                        : side == HitSide.Rear ? "<color=#ff6666>КОРМА</color>"
-                                                 : "<color=#ffcc00>БОРТ</color>";
-        Debug.Log($"[Танк {teamId}] {sideName} ({armorMM}мм) | {rawDamage:F0} × {multiplier:F2} = <b>{effectiveDamage:F1}</b> HP | Осталось {Mathf.Max(0, CurrentHealth):F0}");
-
-        // Эффект попадания в точке касания (на краю коллайдера)
-        if (hitEffectPrefab != null)
-            Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
-
-        if (CurrentHealth <= 0)
-        {
-            CurrentHealth = 0;
-            Die();
-        }
-    }
-
-    // Определяем, куда прилетело: лоб / борт / корма
-    private HitSide GetHitSide(Vector3 hitPoint)
+    public HitSide GetHitSide(Vector3 hitPoint)
     {
         if (movement == null) return HitSide.Side;
-
-        float noseAngle = movement.VisualAngle;
         Vector3 toHit = hitPoint - transform.position;
         float hitAngle = Mathf.Atan2(toHit.y, toHit.x) * Mathf.Rad2Deg;
-
-        // Разница между направлением носа и направлением на точку попадания
-        float delta = Mathf.Abs(Mathf.DeltaAngle(hitAngle, noseAngle));
-
-        if (delta < 45f) return HitSide.Front;  // ±45° от носа — лоб
-        if (delta < 135f) return HitSide.Side;   // ±90° сектор — борт
-        return HitSide.Rear;                     // всё остальное — корма
+        float delta = Mathf.Abs(Mathf.DeltaAngle(hitAngle, movement.VisualAngle));
+        if (delta < 45f) return HitSide.Front;
+        if (delta < 135f) return HitSide.Side;
+        return HitSide.Rear;
     }
 
-    private float GetArmorMM(HitSide side)
+    public float GetArmorMM(HitSide side)
     {
         switch (side)
         {
@@ -106,27 +65,47 @@ public class Tank_T90 : MonoBehaviour
         }
     }
 
+    public void ApplyShellImpact(ShellImpactResult impact, Vector3 hitPoint, ShellType shellType)
+    {
+        if (isDead) return;
+        if (impact.damage > 0f) ApplyDamage(impact.damage, hitPoint);
+        else if (hitEffectPrefab != null) Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+    }
+
+    // Legacy damage entry point retained for other gameplay scripts.
+    public void TakeDamage(float rawDamage, Vector3 hitPoint)
+    {
+        if (isDead || rawDamage <= 0f) return;
+        ApplyDamage(rawDamage, hitPoint);
+    }
+
+    private void ApplyDamage(float damage, Vector3 hitPoint)
+    {
+        CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
+        if (hitEffectPrefab != null) Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+        Debug.Log($"[Tank {teamId}] Получено {damage:F1} урона | HP: {CurrentHealth:F1}/{maxHealth:F1}");
+        if (CurrentHealth <= 0f) Die();
+    }
+
     private void Die()
     {
+        if (isDead) return;
         isDead = true;
-        if (movement != null) movement.Stop();
+        movement?.Stop();
 
         TankCombat combat = GetComponent<TankCombat>();
         if (combat != null) combat.enabled = false;
 
-        Collider2D[] colliders = GetComponentsInChildren<Collider2D>();
-        foreach (var col in colliders) col.enabled = false;
+        foreach (Collider2D col in GetComponentsInChildren<Collider2D>())
+            col.enabled = false;
 
         if (selectionArrow != null) selectionArrow.SetActive(false);
-
         if (animator != null)
         {
-            int randomDeath = Random.Range(0, 3);
-            animator.SetInteger("DeathType", randomDeath);
+            animator.SetInteger("DeathType", Random.Range(0, 3));
             animator.SetTrigger("Die");
         }
-        if (explosionPrefab != null)
-            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        if (explosionPrefab != null) Instantiate(explosionPrefab, transform.position, Quaternion.identity);
     }
 
     public bool IsDead => isDead;
