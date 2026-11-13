@@ -60,6 +60,8 @@ public class TankCombat : MonoBehaviour
 
     public bool SelectShell(ShellType type)
     {
+        if (ammo == null) return false;
+
         for (int i = 0; i < ammo.Count; i++)
         {
             if (ammo[i] != null && ammo[i].type == type && ammo[i].amount > 0)
@@ -73,10 +75,12 @@ public class TankCombat : MonoBehaviour
 
     public bool SelectNextShell()
     {
-        if (ammo.Count == 0) return false;
+        if (ammo == null || ammo.Count == 0) return false;
+
+        int startIndex = ((selectedAmmoIndex % ammo.Count) + ammo.Count) % ammo.Count;
         for (int i = 1; i <= ammo.Count; i++)
         {
-            int index = (selectedAmmoIndex + i) % ammo.Count;
+            int index = (startIndex + i) % ammo.Count;
             if (ammo[index] != null && ammo[index].amount > 0)
             {
                 selectedAmmoIndex = index;
@@ -88,6 +92,8 @@ public class TankCombat : MonoBehaviour
 
     public int GetAmmo(ShellType type)
     {
+        if (ammo == null) return 0;
+
         int total = 0;
         foreach (AmmoSettings item in ammo)
             if (item != null && item.type == type) total += item.amount;
@@ -96,16 +102,16 @@ public class TankCombat : MonoBehaviour
 
     private AmmoSettings GetSelectedAmmo()
     {
-        if (selectedAmmoIndex < 0 || selectedAmmoIndex >= ammo.Count) return null;
+        if (ammo == null || selectedAmmoIndex < 0 || selectedAmmoIndex >= ammo.Count) return null;
         return ammo[selectedAmmoIndex];
     }
 
     private int FindLoadedAmmo(int start)
     {
-        if (ammo.Count == 0) return 0;
+        if (ammo == null || ammo.Count == 0) return 0;
         for (int i = 0; i < ammo.Count; i++)
         {
-            int index = (start + i) % ammo.Count;
+            int index = (((start % ammo.Count) + ammo.Count) % ammo.Count + i) % ammo.Count;
             if (ammo[index] != null && ammo[index].amount > 0) return index;
         }
         return 0;
