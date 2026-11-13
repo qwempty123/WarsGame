@@ -59,6 +59,31 @@ public class UnitSelection : MonoBehaviour
 
         // --- ОБНОВЛЕНИЕ НАВЕДЕНИЯ НА ВРАГА (ДЛЯ ЛИНИЙ) ---
         UpdateHoveredEnemy();
+
+        // Переключение боеприпасов для всех выбранных танков.
+        HandleAmmoHotkeys();
+    }
+
+    private void HandleAmmoHotkeys()
+    {
+        ShellType? requestedType = null;
+
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+            requestedType = ShellType.AP;
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+            requestedType = ShellType.HEAT;
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+            requestedType = ShellType.HE;
+
+        if (!requestedType.HasValue) return;
+
+        foreach (Tank_T90 tank in selectedTanks)
+        {
+            if (tank == null) continue;
+
+            TankCombat combat = tank.GetComponent<TankCombat>();
+            if (combat != null) combat.SelectShell(requestedType.Value);
+        }
     }
 
     private void UpdateHoveredEnemy()
@@ -231,6 +256,68 @@ public class UnitSelection : MonoBehaviour
                 DrawAttackLine(tank.transform.position, hoveredEnemy.transform.position, combat.attackRange);
             }
         }
+
+        DrawAmmoHud();
+    }
+
+    private void DrawAmmoHud()
+    {
+        Tank_T90 hudTank = null;
+        TankCombat combat = null;
+
+        // При мультивыделении HUD показывает боезапас первого выбранного танка
+        // с TankCombat; клавиши при этом применяются ко всем выбранным танкам.
+        foreach (Tank_T90 tank in selectedTanks)
+        {
+            if (tank == null) continue;
+
+            TankCombat candidate = tank.GetComponent<TankCombat>();
+            if (candidate == null) continue;
+
+            hudTank = tank;
+            combat = candidate;
+            break;
+        }
+
+        if (combat == null) return;
+
+        const float panelWidth = 188f;
+        const float panelHeight = 108f;
+        float panelX = 16f;
+        float panelY = Screen.height - panelHeight - 16f;
+        Rect panel = new Rect(panelX, panelY, panelWidth, panelHeight);
+
+        Color previousColor = GUI.color;
+        GUI.color = new Color(0.08f, 0.09f, 0.1f, 0.92f);
+        GUI.Box(panel, GUIContent.none);
+        GUI.color = Color.white;
+
+        GUI.Label(new Rect(panelX + 10f, panelY + 5f, panelWidth - 20f, 18f), "AMMUNITION");
+        GUI.Label(new Rect(panelX + 10f, panelY + 22f, panelWidth - 20f, 16f), hudTank.name);
+
+        DrawAmmoRow(panelX, panelY + 42f, ShellType.AP, "1", combat);
+        DrawAmmoRow(panelX, panelY + 62f, ShellType.HEAT, "2", combat);
+        DrawAmmoRow(panelX, panelY + 82f, ShellType.HE, "3", combat);
+
+        GUI.color = previousColor;
+    }
+
+    private void DrawAmmoRow(float panelX, float rowY, ShellType type, string key, TankCombat combat)
+    {
+        bool selected = combat.SelectedShell == type;
+        Color previousColor = GUI.color;
+
+        if (selected)
+        {
+            GUI.color = new Color(0.2f, 0.55f, 0.25f, 0.9f);
+            GUI.DrawTexture(new Rect(panelX + 6f, rowY, 176f, 19f), Texture2D.whiteTexture);
+        }
+
+        GUI.color = Color.white;
+        GUI.Label(new Rect(panelX + 12f, rowY, 110f, 19f), key + "  " + type);
+        GUI.Label(new Rect(panelX + 132f, rowY, 42f, 19f), combat.GetAmmo(type).ToString());
+
+        GUI.color = previousColor;
     }
 
     // Рисует линию и крестик радиуса атаки
