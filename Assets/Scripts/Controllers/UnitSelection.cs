@@ -108,10 +108,10 @@ public class UnitSelection : MonoBehaviour
         Vector3 mouseWorld = GetMouseWorldPos();
         Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
 
-        if (hit.GetComponent<Collider>() != null)
+        if (hit != null)
         {
-            Tank_T90 tank = hit.GetComponent<Collider>().GetComponent<Tank_T90>();
-            if (tank == null) tank = hit.GetComponent<Collider>().GetComponentInParent<Tank_T90>();
+            Tank_T90 tank = hit.GetComponent<Tank_T90>();
+            if (tank == null) tank = hit.GetComponentInParent<Tank_T90>();
 
             // Если навели на врага (ID не равен 0)
             if (tank != null && tank.teamId != 0)
@@ -135,10 +135,10 @@ public class UnitSelection : MonoBehaviour
         Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
         bool clickedOurTank = false;
 
-        if (hit.GetComponent<Collider>() != null)
+        if (hit != null)
         {
-            Tank_T90 tank = hit.GetComponent<Collider>().GetComponent<Tank_T90>();
-            if (tank == null) tank = hit.GetComponent<Collider>().GetComponentInParent<Tank_T90>();
+            Tank_T90 tank = hit.GetComponent<Tank_T90>();
+            if (tank == null) tank = hit.GetComponentInParent<Tank_T90>();
 
             if (tank != null && tank.teamId == 0)
             {
@@ -199,10 +199,10 @@ public class UnitSelection : MonoBehaviour
         Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
         Tank_T90 clickedTank = null;
 
-        if (hit.GetComponent<Collider>() != null)
+        if (hit != null)
         {
-            clickedTank = hit.GetComponent<Collider>().GetComponent<Tank_T90>();
-            if (clickedTank == null) clickedTank = hit.GetComponent<Collider>().GetComponentInParent<Tank_T90>();
+            clickedTank = hit.GetComponent<Tank_T90>();
+            if (clickedTank == null) clickedTank = hit.GetComponentInParent<Tank_T90>();
         }
 
         // АТАКА
