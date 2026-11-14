@@ -19,6 +19,7 @@ public class TankMovement : MonoBehaviour
     private bool hasFinalFacingDirection;
     private bool isMoving;
     private bool hasFacingOrder;
+    private bool faceWorldPositionMode;
     private Vector3 facingWorldPosition;
     private Animator animator;
 
@@ -66,6 +67,7 @@ public class TankMovement : MonoBehaviour
             finalFacingDirection = desiredFacingDirection.normalized;
 
         hasFacingOrder = false;
+        faceWorldPositionMode = false;
         SetMoving(true);
         return true;
     }
@@ -78,6 +80,7 @@ public class TankMovement : MonoBehaviour
         hasFinalFacingDirection = false;
         finalFacingDirection = worldDirection.normalized;
         hasFacingOrder = true;
+        faceWorldPositionMode = false;
     }
 
     // Боевое поведение: корпус старается держать лоб направленным на цель.
@@ -86,6 +89,7 @@ public class TankMovement : MonoBehaviour
         Stop();
         hasFinalFacingDirection = false;
         hasFacingOrder = true;
+        faceWorldPositionMode = true;
         facingWorldPosition = worldPosition;
     }
 
@@ -131,7 +135,8 @@ public class TankMovement : MonoBehaviour
                 if (hasFinalFacingDirection)
                 {
                     hasFacingOrder = true;
-                    facingWorldPosition = transform.position + (Vector3)finalFacingDirection;
+                    faceWorldPositionMode = false;
+                    finalFacingDirection = finalFacingDirection.normalized;
                 }
                 else
                 {
@@ -157,7 +162,7 @@ public class TankMovement : MonoBehaviour
         if (hasFacingOrder)
         {
             Vector2 direction = finalFacingDirection;
-            if (facingWorldPosition != Vector3.zero)
+            if (faceWorldPositionMode)
                 direction = (Vector2)(facingWorldPosition - transform.position);
 
             if (direction.sqrMagnitude > 0.001f)
