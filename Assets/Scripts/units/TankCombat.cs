@@ -11,8 +11,15 @@ public class AmmoSettings
     [Min(0)] public int amount = 20;
     [Min(0f)] public float damage = 30f;
     [Min(0f)] public float penetration = 100f;
-    [Min(0.1f)] public float reloadTime = 2f;
-    [Min(0.1f)] public float projectileSpeed = 12f;
+    [Min(0.1f)]
+    [InspectorName("Перезарядка (сек.)")]
+    [Tooltip("Пауза между выстрелами этим типом снаряда.")]
+    public float reloadTime = 2f;
+
+    [Min(0.1f)]
+    [InspectorName("Скорость снаряда")]
+    [Tooltip("Скорость полёта снаряда в мировых единицах в секунду.")]
+    public float projectileSpeed = 12f;
     [Min(0f)] public float splashRadius = 0f;
     [Min(0f)] public float splashDamage = 0f;
 }
