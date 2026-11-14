@@ -79,10 +79,6 @@ public class Tank_T90 : MonoBehaviour
             if (hitEffectPrefab != null)
                 Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
         }
-        else if (hitEffectPrefab != null)
-        {
-            Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
-        }
     }
 
     private enum ArmorZone { Front, Side, Rear }
