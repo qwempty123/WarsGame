@@ -95,29 +95,71 @@ public class TankCombat : MonoBehaviour
     }
     private void Update()
     {
-        if (currentTarget == null) return;
-        if (currentTarget.IsDead) { currentTarget = null; movement?.Stop(); return; }
         if (turretTransform == null) return;
+
+        // Без цели башня возвращается к направлению корпуса.
+        if (currentTarget == null)
+        {
+            RotateTurretToHullForward();
+            return;
+        }
+
+        if (currentTarget.IsDead)
+        {
+            currentTarget = null;
+            movement?.Stop();
+            RotateTurretToHullForward();
+            return;
+        }
+
+        // Во время атаки башня независимо сопровождает цель,
+        // даже пока корпус движется к ней.
         RotateTurretTowards(currentTarget.transform.position);
+
         float distance = Vector2.Distance(transform.position, currentTarget.transform.position);
-        if (distance > attackRange) { movement?.SetDestination(currentTarget.transform.position); return; }
+        if (distance > attackRange)
+        {
+            movement?.SetDestination(currentTarget.transform.position);
+            return;
+        }
+
         movement?.Stop();
+
         AmmoSettings selected = GetSelectedAmmo();
         if (selected == null || selected.amount <= 0)
         {
             if (!SelectNextShell()) return;
             selected = GetSelectedAmmo();
         }
+
         if (IsTurretAimedAt(currentTarget.transform.position) && Time.time >= nextFireTime)
             Shoot(selected, currentTarget);
     }
+
+    private void RotateTurretToHullForward()
+    {
+        if (movement == null) return;
+
+        float hullAngle = movement.VisualAngle;
+        Quaternion targetRotation = Quaternion.Euler(0f, 0f, hullAngle + 180f);
+        turretTransform.rotation = Quaternion.RotateTowards(
+            turretTransform.rotation,
+            targetRotation,
+            turretTurnSpeed * Time.deltaTime);
+    }
+
     private void RotateTurretTowards(Vector3 worldPosition)
     {
         Vector2 toTarget = (Vector2)(worldPosition - turretTransform.position);
         if (toTarget.sqrMagnitude < 0.001f) return;
+
         float forwardAngle = Mathf.Atan2(toTarget.y, toTarget.x) * Mathf.Rad2Deg;
-        Quaternion targetRotation = Quaternion.Euler(0f, 0f, forwardAngle + 180f); // башня смотрит в локальный -X
-        turretTransform.rotation = Quaternion.RotateTowards(turretTransform.rotation, targetRotation, turretTurnSpeed * Time.deltaTime);
+        // Исходный спрайт башни направлен в локальный -X.
+        Quaternion targetRotation = Quaternion.Euler(0f, 0f, forwardAngle + 180f);
+        turretTransform.rotation = Quaternion.RotateTowards(
+            turretTransform.rotation,
+            targetRotation,
+            turretTurnSpeed * Time.deltaTime);
     }
     private bool IsTurretAimedAt(Vector3 worldPosition)
     {
