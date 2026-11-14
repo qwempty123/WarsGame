@@ -119,11 +119,13 @@ public class TankCombat : MonoBehaviour
         float distance = Vector2.Distance(transform.position, currentTarget.transform.position);
         if (distance > attackRange)
         {
-            movement?.SetDestination(currentTarget.transform.position);
+            movement?.SetDestination(currentTarget.transform.position, currentTarget.transform.position - transform.position);
             return;
         }
 
-        movement?.Stop();
+        // В пределах дальности корпус разворачивается лбом к цели,
+        // башня продолжает независимо наводиться и стрелять.
+        movement?.FaceTowards(currentTarget.transform.position);
 
         AmmoSettings selected = GetSelectedAmmo();
         if (selected == null || selected.amount <= 0)
