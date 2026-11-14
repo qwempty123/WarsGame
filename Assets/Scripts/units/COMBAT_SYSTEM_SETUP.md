@@ -83,6 +83,21 @@ Current defaults:
 | HEAT | 3.5 s | 11 |
 | HE | 3 s | 10 |
 
+## Long-range fire and shot dispersion
+
+Tank shots use a fixed impact point instead of homing onto the target. At the moment of firing, the game chooses a random point inside a circle around the target. A projectile can hit another tank or obstacle along its flight path; if it reaches the selected point without hitting anything, it misses. HE shells still apply splash damage around their detonation point, including when the direct shot misses.
+
+Configure these values on the tank's `TankCombat` component:
+
+- **Max Attack Range Meters** — maximum firing distance in meters. Default: 10,000.
+- **Meters Per World Unit** — conversion from Unity world units to meters. Default: 7, matching the current `TankMovement` scale.
+- **Min Scatter Radius Meters** — dispersion radius at close range. Default: 2 m.
+- **Max Scatter Radius Meters** — dispersion radius at maximum range. Default: 150 m.
+
+The dispersion radius grows linearly with distance: the farther the target, the larger the circle in which the shell may land. The random impact point is chosen independently for every shot. These are gameplay values and can be adjusted in the Inspector.
+
+With the default scale, 10,000 m equals about 1,428.6 Unity world units. The target must be within the configured maximum range before the tank fires.
+
 ## Selection cleanup
 
 Destroyed or missing tanks are automatically removed from the current selection during `UnitSelection.Update`. They no longer receive group commands or ammo hotkeys, and the ammo HUD stops using them.
