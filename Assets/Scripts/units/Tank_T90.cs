@@ -76,8 +76,7 @@ public class Tank_T90 : MonoBehaviour
         else
         {
             Debug.Log($"[Tank {teamId}] Shell bounced: {zone} armor stopped penetration.");
-            if (hitEffectPrefab != null)
-                Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+            SpawnHitEffect(hitPoint);
         }
     }
 
@@ -119,13 +118,21 @@ public class Tank_T90 : MonoBehaviour
         }
     }
 
+    private void SpawnHitEffect(Vector3 position)
+    {
+        if (hitEffectPrefab == null) return;
+
+        GameObject effect = Instantiate(hitEffectPrefab, position, Quaternion.identity);
+        Destroy(effect, 5f);
+    }
+
     // Used by splash damage and other gameplay scripts.
     public void TakeDamage(float damage, Vector3 hitPoint)
     {
         if (isDead || damage <= 0f) return;
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
-        if (hitEffectPrefab != null) Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+        SpawnHitEffect(hitPoint);
         Debug.Log($"[Tank {teamId}] Damage: {damage:F1} | HP: {CurrentHealth:F1}/{maxHealth:F1}");
 
         if (CurrentHealth <= 0f) Die();
