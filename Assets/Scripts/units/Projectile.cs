@@ -41,7 +41,7 @@ public class Projectile : MonoBehaviour
     }
     private void HitTank(Tank_T90 tank, Vector3 hitPoint)
     {
-        tank.TakeShellDamage(penetration, damage, shellType == ShellType.HE, hitPoint);
+        tank.TakeShellDamage(penetration, damage, shellType == ShellType.HE, hitPoint, direction);
         if (shellType == ShellType.HE && splashRadius > 0f && splashDamage > 0f)
         {
             Collider2D[] nearby = Physics2D.OverlapCircleAll(hitPoint, splashRadius);
