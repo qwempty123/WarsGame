@@ -63,6 +63,26 @@ selection manager has this component enabled.
 | HE | 15 | 20 | 3 s | 8 |
 
 HE example: splash radius 1.5 world units, splash damage 25. These are gameplay values; adjust them to your sprite scale and desired time-to-kill.
+## Reload and projectile speed settings
+
+Both values are configured separately for each shell type on the tank prefab:
+
+1. Select the tank prefab or tank GameObject.
+2. Open the `TankCombat` component and expand the `Ammo` list.
+3. Select an ammo entry (AP, HEAT, or HE) and edit:
+   - **Перезарядка (сек.)** — delay after firing before the tank can fire again.
+   - **Скорость снаряда** — projectile travel speed in world units per second.
+
+The values are independent for AP, HEAT, and HE. For example, you can make AP reload quickly, HEAT reload slowly, and give each shell a different projectile speed. Changes are made in the Inspector; no code edits are required.
+
+Current defaults:
+
+| Shell | Reload | Projectile speed |
+|---|---:|---:|
+| AP | 2.5 s | 14 |
+| HEAT | 3.5 s | 11 |
+| HE | 3 s | 10 |
+
 ## Selection cleanup
 
 Destroyed or missing tanks are automatically removed from the current selection during `UnitSelection.Update`. They no longer receive group commands or ammo hotkeys, and the ammo HUD stops using them.
