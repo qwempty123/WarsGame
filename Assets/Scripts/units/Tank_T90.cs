@@ -18,6 +18,15 @@ public class Tank_T90 : MonoBehaviour
     public float rearArmorMultiplier = 0.4f;
     [Range(30f, 160f), Tooltip("Полная ширина лобовой зоны в градусах.")]
     public float frontArmorArc = 120f;
+
+    [Header("Damage By Hit Zone")]
+    [Range(0.1f, 2f), Tooltip("Множитель урона при попадании в лоб.")]
+    public float frontDamageMultiplier = 0.75f;
+    [Range(0.1f, 2f), Tooltip("Множитель урона при попадании в борт.")]
+    public float sideDamageMultiplier = 1f;
+    [Range(0.1f, 2f), Tooltip("Множитель урона при попадании в корму.")]
+    public float rearDamageMultiplier = 1.25f;
+
     public float CurrentHealth { get; private set; }
 
     [Header("Effects")]
@@ -52,12 +61,23 @@ public class Tank_T90 : MonoBehaviour
 
         if (penetration >= effectiveArmor)
         {
-            TakeDamage(damage, hitPoint);
+            float damageMultiplier = GetZoneDamageMultiplier(zone);
+            float finalDamage = damage * damageMultiplier;
+            Debug.Log($"[Tank {teamId}] Penetrated {zone} | Damage: {finalDamage:F1} (x{damageMultiplier:F2})");
+            TakeDamage(finalDamage, hitPoint);
         }
         else if (isExplosive)
         {
             // HE может нанести ограниченный урон даже без пробития.
-            TakeDamage(damage * 0.2f, hitPoint);
+            float blockedDamage = damage * 0.2f;
+            Debug.Log($"[Tank {teamId}] HE blocked by {zone} armor | Damage: {blockedDamage:F1}");
+            TakeDamage(blockedDamage, hitPoint);
+        }
+        else
+        {
+            Debug.Log($"[Tank {teamId}] Shell bounced: {zone} armor stopped penetration.");
+            if (hitEffectPrefab != null)
+                Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
         }
         else if (hitEffectPrefab != null)
         {
@@ -89,6 +109,17 @@ public class Tank_T90 : MonoBehaviour
             case ArmorZone.Side: return armor * sideArmorMultiplier;
             case ArmorZone.Rear: return armor * rearArmorMultiplier;
             default: return armor;
+        }
+    }
+
+    private float GetZoneDamageMultiplier(ArmorZone zone)
+    {
+        switch (zone)
+        {
+            case ArmorZone.Front: return frontDamageMultiplier;
+            case ArmorZone.Side: return sideDamageMultiplier;
+            case ArmorZone.Rear: return rearDamageMultiplier;
+            default: return 1f;
         }
     }
 
