@@ -11,7 +11,6 @@ public class UnitSelection : MonoBehaviour
     private Vector3 dragStartWorld;
     private bool isDragging = false;
     private bool isBoxSelecting = false;
-    private bool isFacingMoveOrder = false;
 
     // Враг, на которого сейчас наведена мышь
     private Tank_T90 hoveredEnemy = null;
@@ -26,8 +25,6 @@ public class UnitSelection : MonoBehaviour
             dragStartWorld = GetMouseWorldPos();
             isDragging = true;
             isBoxSelecting = false;
-            isFacingMoveOrder = selectedTanks.Count > 0 &&
-                FindTankAtPoint(dragStartWorld, false) == null;
         }
 
         if (Input.GetMouseButton(0) && isDragging)
@@ -37,8 +34,7 @@ public class UnitSelection : MonoBehaviour
 
             if (Vector3.Distance(startScreen, currentScreen) > dragThreshold)
             {
-                if (!isFacingMoveOrder)
-                    isBoxSelecting = true;
+                isBoxSelecting = true;
             }
         }
 
@@ -46,16 +42,7 @@ public class UnitSelection : MonoBehaviour
         {
             isDragging = false;
 
-            if (isFacingMoveOrder)
-            {
-                Vector3 dragEnd = GetMouseWorldPos();
-                Vector2 facingDirection = (Vector2)(dragEnd - dragStartWorld);
-                if (facingDirection.magnitude >= minDragWorldDistance)
-                    IssueFacingMoveOrder(dragStartWorld, facingDirection);
-                else
-                    HandleSingleClick();
-            }
-            else if (isBoxSelecting)
+            if (isBoxSelecting)
             {
                 SelectUnitsInBox(dragStartWorld, GetMouseWorldPos(), Input.GetKey(KeyCode.LeftShift));
             }
@@ -64,7 +51,6 @@ public class UnitSelection : MonoBehaviour
                 HandleSingleClick();
             }
             isBoxSelecting = false;
-            isFacingMoveOrder = false;
         }
 
         // --- ПРАВАЯ КНОПКА МЫШИ (ПРИКАЗЫ) ---
@@ -146,26 +132,6 @@ public class UnitSelection : MonoBehaviour
         }
 
         return null;
-    }
-
-    private const float minDragWorldDistance = 0.15f;
-
-    private void IssueFacingMoveOrder(Vector3 destination, Vector2 facingDirection)
-    {
-        foreach (Tank_T90 tank in selectedTanks)
-        {
-            if (tank == null || tank.IsDead) continue;
-
-            TankCombat combat = tank.GetComponent<TankCombat>();
-            if (combat != null) combat.ClearTarget();
-
-            TankMovement movement = tank.GetComponent<TankMovement>();
-            if (movement != null)
-            {
-                Vector2 formationOffset = Random.insideUnitCircle * 1.0f;
-                movement.SetDestination(destination + (Vector3)formationOffset, facingDirection);
-            }
-        }
     }
 
     private Vector3 GetMouseWorldPos()
@@ -259,8 +225,7 @@ public class UnitSelection : MonoBehaviour
                 TankMovement move = tank.GetComponent<TankMovement>();
                 if (move != null)
                 {
-                    Vector2 offset = Random.insideUnitCircle * 1.5f;
-                    move.SetDestination(mouseWorld + (Vector3)offset);
+                    move.SetDestination(mouseWorld);
                 }
             }
         }
