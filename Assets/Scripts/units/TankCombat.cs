@@ -26,8 +26,16 @@ public class AmmoSettings
 
 public class TankCombat : MonoBehaviour
 {
+    [Header("Дальность и разброс")]
+    [Min(1f)] public float maxAttackRangeMeters = 10000f;
+    [Min(0.01f)] public float metersPerWorldUnit = 7f;
+    [Min(0f)] public float minScatterRadiusMeters = 2f;
+    [Min(0f)] public float maxScatterRadiusMeters = 150f;
+
+    // Оставлено публичным для отображения дальности в UnitSelection и Gizmos.
+    public float attackRange => maxAttackRangeMeters / Mathf.Max(0.01f, metersPerWorldUnit);
+
     [Header("Combat")]
-    [Min(0.1f)] public float attackRange = 5f;
     [Range(0f, 45f)] public float aimTolerance = 5f;
     public GameObject projectilePrefab;
     public Transform firePoint;
@@ -171,7 +179,15 @@ public class TankCombat : MonoBehaviour
             return;
         }
 
-        projectile.Setup(target.transform, selected, myTank.teamId);
+        float distanceMeters = Vector2.Distance(transform.position, target.transform.position) * metersPerWorldUnit;
+        float range01 = Mathf.Clamp01(distanceMeters / Mathf.Max(1f, maxAttackRangeMeters));
+        float scatterRadiusMeters = Mathf.Lerp(minScatterRadiusMeters, maxScatterRadiusMeters, range01);
+        float scatterRadiusWorld = scatterRadiusMeters / Mathf.Max(0.01f, metersPerWorldUnit);
+        Vector2 scatterOffset = UnityEngine.Random.insideUnitCircle * scatterRadiusWorld;
+        Vector3 impactPoint = target.transform.position + (Vector3)scatterOffset;
+
+        // Точка попадания фиксируется при выстреле: снаряд больше не преследует цель.
+        projectile.Setup(impactPoint, selected, myTank.teamId);
         selected.amount--;
         nextFireTime = Time.time + Mathf.Max(0.1f, selected.reloadTime);
     }
