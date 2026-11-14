@@ -106,19 +106,32 @@ public class UnitSelection : MonoBehaviour
         if (selectedTanks.Count == 0) return;
 
         Vector3 mouseWorld = GetMouseWorldPos();
-        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
+        hoveredEnemy = FindTankAtPoint(mouseWorld, true);
+    }
 
-        if (hit != null)
+
+    // Ищет танк среди всех Collider2D под точкой курсора.
+    // OverlapPointAll не зависит от порядка коллайдеров, в отличие от одиночного OverlapPoint.
+    private Tank_T90 FindTankAtPoint(Vector2 worldPoint, bool enemy)
+    {
+        Collider2D[] hits = Physics2D.OverlapPointAll(worldPoint);
+        Tank_T90 fallback = null;
+
+        foreach (Collider2D hit in hits)
         {
+            if (hit == null) continue;
+
             Tank_T90 tank = hit.GetComponent<Tank_T90>();
             if (tank == null) tank = hit.GetComponentInParent<Tank_T90>();
+            if (tank == null || tank.IsDead) continue;
 
-            // Если навели на врага (ID не равен 0)
-            if (tank != null && tank.teamId != 0)
-            {
-                hoveredEnemy = tank;
-            }
+            bool isEnemy = tank.teamId != 0;
+            if (isEnemy == enemy) return tank;
+
+            if (fallback == null) fallback = tank;
         }
+
+        return null;
     }
 
     private Vector3 GetMouseWorldPos()
@@ -132,25 +145,19 @@ public class UnitSelection : MonoBehaviour
     private void HandleSingleClick()
     {
         Vector3 mouseWorld = GetMouseWorldPos();
-        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
         bool clickedOurTank = false;
+        Tank_T90 tank = FindTankAtPoint(mouseWorld, false);
 
-        if (hit != null)
+        if (tank != null)
         {
-            Tank_T90 tank = hit.GetComponent<Tank_T90>();
-            if (tank == null) tank = hit.GetComponentInParent<Tank_T90>();
+            if (!Input.GetKey(KeyCode.LeftShift)) ClearSelection();
 
-            if (tank != null && tank.teamId == 0)
+            if (!selectedTanks.Contains(tank))
             {
-                if (!Input.GetKey(KeyCode.LeftShift)) ClearSelection();
-
-                if (!selectedTanks.Contains(tank))
-                {
-                    selectedTanks.Add(tank);
-                    tank.SetSelected(true);
-                }
-                clickedOurTank = true;
+                selectedTanks.Add(tank);
+                tank.SetSelected(true);
             }
+            clickedOurTank = true;
         }
 
         if (!clickedOurTank && !Input.GetKey(KeyCode.LeftShift))
@@ -196,17 +203,10 @@ public class UnitSelection : MonoBehaviour
     {
         if (selectedTanks.Count == 0) return;
 
-        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
-        Tank_T90 clickedTank = null;
-
-        if (hit != null)
-        {
-            clickedTank = hit.GetComponent<Tank_T90>();
-            if (clickedTank == null) clickedTank = hit.GetComponentInParent<Tank_T90>();
-        }
+        Tank_T90 clickedTank = FindTankAtPoint(mouseWorld, true);
 
         // АТАКА
-        if (clickedTank != null && clickedTank.teamId != 0)
+        if (clickedTank != null)
         {
             foreach (var tank in selectedTanks)
             {
