@@ -106,7 +106,7 @@ public class UnitSelection : MonoBehaviour
         if (selectedTanks.Count == 0) return;
 
         Vector3 mouseWorld = GetMouseWorldPos();
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
 
         if (hit.collider != null)
         {
@@ -132,7 +132,7 @@ public class UnitSelection : MonoBehaviour
     private void HandleSingleClick()
     {
         Vector3 mouseWorld = GetMouseWorldPos();
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
         bool clickedOurTank = false;
 
         if (hit.collider != null)
@@ -196,7 +196,7 @@ public class UnitSelection : MonoBehaviour
     {
         if (selectedTanks.Count == 0) return;
 
-        RaycastHit2D hit = Physics2D.Raycast(mouseWorld, Vector2.zero);
+        Collider2D hit = Physics2D.OverlapPoint(mouseWorld);
         Tank_T90 clickedTank = null;
 
         if (hit.collider != null)
