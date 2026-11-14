@@ -10,7 +10,14 @@ public class Tank_T90 : MonoBehaviour
 
     [Header("Health & Armor")]
     [Min(1f)] public float maxHealth = 100f;
-    [Min(0f)] public float armor = 100f;
+    [Min(0f), Tooltip("Базовая броня лобовой проекции.")]
+    public float armor = 100f;
+    [Range(0.1f, 1f), Tooltip("Доля лобовой брони для бортового попадания.")]
+    public float sideArmorMultiplier = 0.6f;
+    [Range(0.1f, 1f), Tooltip("Доля лобовой брони для попадания в корму.")]
+    public float rearArmorMultiplier = 0.4f;
+    [Range(30f, 160f), Tooltip("Полная ширина лобовой зоны в градусах.")]
+    public float frontArmorArc = 120f;
     public float CurrentHealth { get; private set; }
 
     [Header("Effects")]
@@ -34,16 +41,55 @@ public class Tank_T90 : MonoBehaviour
         if (!isDead && selectionArrow != null) selectionArrow.SetActive(selected);
     }
 
-    public void TakeShellDamage(float penetration, float damage, bool isExplosive, Vector3 hitPoint)
+    public void TakeShellDamage(float penetration, float damage, bool isExplosive, Vector3 hitPoint, Vector2 projectileDirection)
     {
         if (isDead) return;
 
-        if (penetration >= armor)
+        ArmorZone zone = GetArmorZone(projectileDirection);
+        float effectiveArmor = GetEffectiveArmor(zone);
+
+        Debug.Log($"[Tank {teamId}] Hit zone: {zone} | Armor: {effectiveArmor:F1} | Penetration: {penetration:F1}");
+
+        if (penetration >= effectiveArmor)
+        {
             TakeDamage(damage, hitPoint);
+        }
         else if (isExplosive)
-            TakeDamage(damage * 0.2f, hitPoint); // HE still deals a little impact damage.
+        {
+            // HE может нанести ограниченный урон даже без пробития.
+            TakeDamage(damage * 0.2f, hitPoint);
+        }
         else if (hitEffectPrefab != null)
+        {
             Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+        }
+    }
+
+    private enum ArmorZone { Front, Side, Rear }
+
+    private ArmorZone GetArmorZone(Vector2 projectileDirection)
+    {
+        Vector2 hullForward = movement != null
+            ? new Vector2(Mathf.Cos(movement.VisualAngle * Mathf.Deg2Rad), Mathf.Sin(movement.VisualAngle * Mathf.Deg2Rad))
+            : (Vector2)transform.right;
+
+        // Направление от танка к стрелявшему: снаряд летит в противоположную сторону.
+        Vector2 directionToShooter = -projectileDirection.normalized;
+        float angle = Vector2.Angle(hullForward, directionToShooter);
+
+        if (angle <= frontArmorArc * 0.5f) return ArmorZone.Front;
+        if (angle >= 180f - frontArmorArc * 0.5f) return ArmorZone.Rear;
+        return ArmorZone.Side;
+    }
+
+    private float GetEffectiveArmor(ArmorZone zone)
+    {
+        switch (zone)
+        {
+            case ArmorZone.Side: return armor * sideArmorMultiplier;
+            case ArmorZone.Rear: return armor * rearArmorMultiplier;
+            default: return armor;
+        }
     }
 
     // Used by splash damage and other gameplay scripts.
