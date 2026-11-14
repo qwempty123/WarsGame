@@ -244,8 +244,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   selectionArrow: {fileID: 817802486}
   teamId: 1
-  maxHealth: 100
+  maxHealth: 1000
   armor: 100
+  sideArmorMultiplier: 0.6
+  rearArmorMultiplier: 0.4
+  frontArmorArc: 120
+  frontDamageMultiplier: 0.75
+  sideDamageMultiplier: 1
+  rearDamageMultiplier: 1.25
   hitEffectPrefab: {fileID: 17197072}
   explosionPrefab: {fileID: 0}
 --- !u!95 &257817271
@@ -1140,7 +1146,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4092827779317677743, guid: 197aa72767a7606478c04bb8664b096c, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
