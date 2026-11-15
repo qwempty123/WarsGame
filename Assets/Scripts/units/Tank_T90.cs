@@ -73,11 +73,6 @@ public class Tank_T90 : MonoBehaviour
             Debug.Log($"[Tank {teamId}] HE blocked by {zone} armor | Damage: {blockedDamage:F1}");
             TakeDamage(blockedDamage, hitPoint);
         }
-        else
-        {
-            Debug.Log($"[Tank {teamId}] Shell bounced: {zone} armor stopped penetration.");
-            if (hitEffectPrefab != null) Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
-        }
     }
 
     private enum ArmorZone { Front, Side, Rear }
